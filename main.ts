@@ -287,15 +287,21 @@ export default class ColorTabPlugin extends Plugin {
 	// ── Helpers ───────────────────────────────────────────────────────────────
 
 	private getFilePath(leaf: WorkspaceLeaf): string | null {
-		// Try to get file from view first (most common), then from leaf directly
+		// Loaded views expose their file directly.
 		const fileFromView = (leaf.view as unknown as { file?: { path: string } })
 			?.file;
 		if (fileFromView?.path) return fileFromView.path;
-		
-		// Fallback for view types like excalidraw that may store file directly on leaf
+
+		// Excalidraw can store the file directly on the leaf.
 		const fileFromLeaf = (leaf as unknown as { file?: { path: string } })
 			?.file;
-		return fileFromLeaf?.path ?? null;
+		if (fileFromLeaf?.path) return fileFromLeaf.path;
+
+		// Background tabs can be deferred after startup, leaving view.file unset.
+		const fileFromState = leaf.getViewState().state?.file;
+		return typeof fileFromState === "string" && fileFromState.length > 0
+			? fileFromState
+			: null;
 	}
 
 	private isColorableLeaf(leaf: WorkspaceLeaf): boolean {
