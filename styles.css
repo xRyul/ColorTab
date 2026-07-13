@@ -14,10 +14,10 @@
   filter: brightness(0.92);
 }
 
-/* Active (focused) colored tab – keep color but add a subtle indicator */
+/* Active colored tabs always render their exact assigned color. */
 .workspace-tab-header.color-tab-colored.is-active.color-tab-colored {
   background-color: var(--tab-bg-color);
-  filter: brightness(0.88);
+  filter: none;
 }
 
 /* WCAG mode adjusts the background and title independently for each state. */

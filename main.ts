@@ -269,7 +269,8 @@ export default class ColorTabPlugin extends Plugin {
 		if (!background || !themeText) return;
 
 		const hoverBackground = darkenColor(background, 0.92);
-		const activeBackground = darkenColor(background, 0.88);
+		// Active tabs retain their assigned color; only inactive hover is darkened.
+		const activeBackground = background;
 		const setTextColor = (
 			property: string,
 			preferred: RgbaColor,
