@@ -10,7 +10,7 @@ interface RgbColor {
 	b: number;
 }
 
-const SHADE_AMOUNTS = [0.45, 0.3, 0.15];
+const SHADE_AMOUNTS = [0.6, 0.4, 0.2];
 
 function parseHexColor(color: string): RgbColor | null {
 	const match = /^#([0-9a-f]{6})$/i.exec(color);
