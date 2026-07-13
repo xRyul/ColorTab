@@ -17,6 +17,7 @@ interface ColorTabSettings {
 	/** Maps file path → hex color */
 	fileColors: Record<string, string>;
 	autoPinColoredTabs: boolean;
+	ensureTextContrast: boolean;
 	preventTabDuplication: boolean;
 }
 
@@ -32,6 +33,7 @@ const DEFAULT_SETTINGS: ColorTabSettings = {
 	colors: DEFAULT_COLORS,
 	fileColors: {},
 	autoPinColoredTabs: true,
+	ensureTextContrast: false,
 	preventTabDuplication: true,
 };
 
@@ -330,6 +332,7 @@ export default class ColorTabPlugin extends Plugin {
 			colors: saved?.colors ?? DEFAULT_COLORS.map((c) => ({ ...c })),
 			fileColors: saved?.fileColors ?? {},
 			autoPinColoredTabs: saved?.autoPinColoredTabs ?? DEFAULT_SETTINGS.autoPinColoredTabs,
+			ensureTextContrast: saved?.ensureTextContrast ?? DEFAULT_SETTINGS.ensureTextContrast,
 			preventTabDuplication: saved?.preventTabDuplication ?? DEFAULT_SETTINGS.preventTabDuplication,
 		};
 	}
@@ -437,6 +440,21 @@ class ColorTabSettingTab extends PluginSettingTab {
 				},
 			},
 			{
+				name: "Ensure text complies with WCAG 2.1 contrast ratio",
+				desc: "Automatically adjusts colored tab titles to meet the WCAG 2.1 AA minimum contrast ratio of 4.5:1.",
+				render: (setting: Setting) => {
+					setting.addToggle((toggle) => {
+						toggle
+							.setValue(this.plugin.settings.ensureTextContrast)
+							.onChange(async (value) => {
+								this.plugin.settings.ensureTextContrast = value;
+								await this.plugin.saveSettings();
+								this.plugin.applyAllColors();
+							});
+					});
+				},
+			},
+			{
 				name: "Prevent Tab Duplication",
 				desc: "When enabled, opening an already-open file will focus on the existing tab instead of creating a duplicate.",
 				render: (setting: Setting) => {
@@ -463,6 +481,8 @@ class ColorTabSettingTab extends PluginSettingTab {
 								);
 								this.plugin.settings.autoPinColoredTabs =
 									DEFAULT_SETTINGS.autoPinColoredTabs;
+								this.plugin.settings.ensureTextContrast =
+									DEFAULT_SETTINGS.ensureTextContrast;
 								this.plugin.settings.preventTabDuplication =
 									DEFAULT_SETTINGS.preventTabDuplication;
 								await this.plugin.saveSettings();
@@ -556,6 +576,21 @@ class ColorTabSettingTab extends PluginSettingTab {
 			});
 
 		new Setting(containerEl)
+			.setName("Ensure text complies with WCAG 2.1 contrast ratio")
+			.setDesc(
+				"Automatically adjusts colored tab titles to meet the WCAG 2.1 AA minimum contrast ratio of 4.5:1."
+			)
+			.addToggle((toggle) => {
+				toggle
+					.setValue(this.plugin.settings.ensureTextContrast)
+					.onChange(async (value) => {
+						this.plugin.settings.ensureTextContrast = value;
+						await this.plugin.saveSettings();
+						this.plugin.applyAllColors();
+					});
+			});
+
+		new Setting(containerEl)
 			.setName("Prevent Tab Duplication")
 			.setDesc(
 				"When enabled, opening an already-open file will focus on the existing tab instead of creating a duplicate."
@@ -581,6 +616,8 @@ class ColorTabSettingTab extends PluginSettingTab {
 						);
 						this.plugin.settings.autoPinColoredTabs =
 							DEFAULT_SETTINGS.autoPinColoredTabs;
+						this.plugin.settings.ensureTextContrast =
+							DEFAULT_SETTINGS.ensureTextContrast;
 						this.plugin.settings.preventTabDuplication =
 							DEFAULT_SETTINGS.preventTabDuplication;
 						await this.plugin.saveSettings();
