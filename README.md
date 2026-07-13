@@ -45,6 +45,14 @@ Examples of how people use it:
 3. Scroll to the bottom — you will see a separator followed by the 5 color options.
 4. Click a color name to apply it. The tab background and title will update immediately.
 
+### Choose a shade
+
+1. Right-click a tab that already has a color.
+2. Open the submenu beside its selected palette color, such as **Red**.
+3. Choose from three darker shades, the configured base color, or three lighter shades.
+
+The submenu remains attached to that palette color after choosing a shade and marks the selected shade with a check.
+
 ### Remove a color
 
 1. Right-click the colored tab.

@@ -1,6 +1,7 @@
 import {
 	App,
 	Menu,
+	MenuItem,
 	Plugin,
 	PluginSettingTab,
 	Setting,
@@ -13,6 +14,7 @@ import {
 	toCssColor,
 } from "./color-contrast";
 import type { RgbColor, RgbaColor } from "./color-contrast";
+import { createColorShades, findColorFamilyIndex } from "./color-shades";
 
 interface ColorEntry {
 	name: string;
@@ -23,6 +25,8 @@ interface ColorTabSettings {
 	colors: ColorEntry[];
 	/** Maps file path → hex color */
 	fileColors: Record<string, string>;
+	/** Maps file path → configured palette slot */
+	fileColorSlots: Record<string, number>;
 	autoPinColoredTabs: boolean;
 	ensureTextContrast: boolean;
 	preventTabDuplication: boolean;
@@ -49,6 +53,7 @@ const DEFAULT_COLORS: ColorEntry[] = [
 const DEFAULT_SETTINGS: ColorTabSettings = {
 	colors: DEFAULT_COLORS,
 	fileColors: {},
+	fileColorSlots: {},
 	autoPinColoredTabs: true,
 	ensureTextContrast: false,
 	preventTabDuplication: true,
@@ -133,14 +138,14 @@ export default class ColorTabPlugin extends Plugin {
 	// ── Commands (hotkeys) ────────────────────────────────────────────────────
 
 	private registerColorCommands() {
-		this.settings.colors.forEach(({ name, color }) => {
+		this.settings.colors.forEach(({ name, color }, colorIndex) => {
 			this.addCommand({
-				id: `set-${name.toLowerCase().replace(/\s+/g, "-")}`,			
+				id: `set-${name.toLowerCase().replace(/\s+/g, "-")}`,
 				name: `Set tab color: ${name}`,
 				checkCallback: (checking: boolean) => {
 					const leaf = this.app.workspace.getMostRecentLeaf();
 					if (!leaf || !this.isColorableLeaf(leaf)) return false;
-					if (!checking) this.setTabColor(leaf, color);
+					if (!checking) this.setTabColor(leaf, color, colorIndex);
 					return true;
 				},
 			});
@@ -169,18 +174,45 @@ export default class ColorTabPlugin extends Plugin {
 	private addColorMenuItems(menu: Menu, leaf: WorkspaceLeaf) {
 		if (!this.isColorableLeaf(leaf)) return;
 
+		const path = this.getFilePath(leaf);
+		const currentColor = path ? this.settings.fileColors[path] : undefined;
+		const selectedColorIndex = currentColor
+			? findColorFamilyIndex(
+				this.settings.colors.map(({ color }) => color),
+				currentColor,
+				path ? this.settings.fileColorSlots[path] : undefined
+			)
+			: null;
+
 		menu.addSeparator();
 
-		this.settings.colors.forEach(({ name, color }) => {
+		this.settings.colors.forEach((colorEntry, colorIndex) => {
+			const { name, color } = colorEntry;
+			const shades =
+				currentColor && colorIndex === selectedColorIndex
+					? createColorShades(color, currentColor)
+					: [];
+			const hasShadeSubmenu = shades.length > 0;
+
 			menu.addItem((item) => {
 				item.setTitle(name);
-				item.onClick(() => this.setTabColor(leaf, color));
-
-				const el = (item as unknown as { dom: HTMLElement }).dom;
-				if (el) {
-					const swatch = el.createEl("span", { cls: "color-tab-swatch" });
-					swatch.style.setProperty("--swatch-color", color);
+				if (hasShadeSubmenu) {
+					const submenu = item.setSubmenu();
+					shades.forEach(({ name, color, isCurrent }) => {
+						submenu.addItem((shadeItem) => {
+							shadeItem
+								.setTitle(name)
+								.setChecked(isCurrent)
+								.onClick(() =>
+									this.setTabColor(leaf, color, colorIndex)
+								);
+							this.addColorSwatch(shadeItem, color);
+						});
+					});
+				} else {
+					item.onClick(() => this.setTabColor(leaf, color, colorIndex));
 				}
+				this.addColorSwatch(item, color);
 			});
 		});
 
@@ -197,15 +229,37 @@ export default class ColorTabPlugin extends Plugin {
 		});
 	}
 
+	private addColorSwatch(item: MenuItem, color: string) {
+		const el = (item as unknown as { dom?: HTMLElement }).dom;
+		if (!el) return;
+
+		const swatch = el.createEl("span", { cls: "color-tab-swatch" });
+		swatch.style.setProperty("--swatch-color", color);
+	}
+
 	// ── Color application ─────────────────────────────────────────────────────
 
-	setTabColor(leaf: WorkspaceLeaf, color: string) {
+	setTabColor(
+		leaf: WorkspaceLeaf,
+		color: string,
+		preferredColorSlot?: number
+	) {
 		if (!this.isColorableLeaf(leaf)) return;
 
 		const path = this.getFilePath(leaf);
 		if (path) {
 			this.settings.fileColors[path] = color;
-				void this.saveSettings();
+			const resolvedColorSlot = findColorFamilyIndex(
+				this.settings.colors.map((entry) => entry.color),
+				color,
+				preferredColorSlot
+			);
+			if (resolvedColorSlot === null) {
+				delete this.settings.fileColorSlots[path];
+			} else {
+				this.settings.fileColorSlots[path] = resolvedColorSlot;
+			}
+			void this.saveSettings();
 		}
 		this.applyColorToLeaf(leaf, color);
 		if (this.settings.autoPinColoredTabs) {
@@ -219,7 +273,8 @@ export default class ColorTabPlugin extends Plugin {
 		const path = this.getFilePath(leaf);
 		if (path) {
 			delete this.settings.fileColors[path];
-				void this.saveSettings();
+			delete this.settings.fileColorSlots[path];
+			void this.saveSettings();
 		}
 		this.applyColorToLeaf(leaf, null);
 		if (this.settings.autoPinColoredTabs) {
@@ -230,6 +285,7 @@ export default class ColorTabPlugin extends Plugin {
 	removeAllTabColors() {
 		const coloredPaths = new Set(Object.keys(this.settings.fileColors));
 		this.settings.fileColors = {};
+		this.settings.fileColorSlots = {};
 		void this.saveSettings();
 		this.app.workspace.iterateAllLeaves((leaf) => {
 			this.applyColorToLeaf(leaf, null);
@@ -522,6 +578,7 @@ export default class ColorTabPlugin extends Plugin {
 		this.settings = {
 			colors: saved?.colors ?? DEFAULT_COLORS.map((c) => ({ ...c })),
 			fileColors: saved?.fileColors ?? {},
+			fileColorSlots: saved?.fileColorSlots ?? {},
 			autoPinColoredTabs: saved?.autoPinColoredTabs ?? DEFAULT_SETTINGS.autoPinColoredTabs,
 			ensureTextContrast: saved?.ensureTextContrast ?? DEFAULT_SETTINGS.ensureTextContrast,
 			preventTabDuplication: saved?.preventTabDuplication ?? DEFAULT_SETTINGS.preventTabDuplication,

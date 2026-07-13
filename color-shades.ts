@@ -75,3 +75,58 @@ export function createColorShades(
 		}),
 	];
 }
+
+function colorDistanceSquared(first: RgbColor, second: RgbColor): number {
+	return (
+		(first.r - second.r) ** 2 +
+		(first.g - second.g) ** 2 +
+		(first.b - second.b) ** 2
+	);
+}
+
+export function findColorFamilyIndex(
+	paletteColors: string[],
+	currentColor: string,
+	preferredIndex?: number
+): number | null {
+	const currentRgb = parseHexColor(currentColor);
+	if (!currentRgb) return null;
+
+	// Keep an explicit association stable when palette colors are edited.
+	if (
+		preferredIndex !== undefined &&
+		Number.isInteger(preferredIndex) &&
+		preferredIndex >= 0 &&
+		preferredIndex < paletteColors.length &&
+		parseHexColor(paletteColors[preferredIndex])
+	) {
+		return preferredIndex;
+	}
+
+	// Infer associations for settings saved before palette slots existed.
+	const normalizedCurrentColor = currentColor.toUpperCase();
+	const exactIndex = paletteColors.findIndex(
+		(color) => color.toUpperCase() === normalizedCurrentColor
+	);
+	if (exactIndex >= 0) return exactIndex;
+
+	const shadeIndex = paletteColors.findIndex((color) =>
+		createColorShades(color, currentColor).some(({ isCurrent }) => isCurrent)
+	);
+	if (shadeIndex >= 0) return shadeIndex;
+
+	// Older builds could shade an already shaded color; recover its nearest family.
+	let closestIndex: number | null = null;
+	let closestDistance = Number.POSITIVE_INFINITY;
+	paletteColors.forEach((color, index) => {
+		const paletteRgb = parseHexColor(color);
+		if (!paletteRgb) return;
+
+		const distance = colorDistanceSquared(currentRgb, paletteRgb);
+		if (distance < closestDistance) {
+			closestIndex = index;
+			closestDistance = distance;
+		}
+	});
+	return closestIndex;
+}
