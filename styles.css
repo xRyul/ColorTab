@@ -20,6 +20,54 @@
   filter: brightness(0.88);
 }
 
+/* WCAG mode adjusts the background and title independently for each state. */
+.workspace-tab-header.color-tab-colored.color-tab-wcag {
+  background-color: var(--tab-bg-color) !important;
+  filter: none !important;
+  transition: none !important;
+}
+
+.workspace-tab-header.color-tab-colored.color-tab-wcag:not(.is-active):hover {
+  background-color: var(--tab-bg-color-hover) !important;
+}
+
+.workspace-tab-header.color-tab-colored.color-tab-wcag:not(.is-active):hover .workspace-tab-header-inner {
+  background-color: transparent !important;
+}
+
+.workspace-tab-header.color-tab-colored.color-tab-wcag.is-active {
+  background-color: var(--tab-bg-color-active) !important;
+}
+
+.workspace-tab-header.color-tab-colored.color-tab-wcag .workspace-tab-header-inner-title {
+  color: var(--color-tab-text) !important;
+}
+
+body.is-focused .workspace-tab-header.color-tab-colored.color-tab-wcag .workspace-tab-header-inner-title {
+  color: var(--color-tab-text-focused) !important;
+}
+
+.workspace-tab-header.color-tab-colored.color-tab-wcag:not(.is-active):hover .workspace-tab-header-inner-title {
+  color: var(--color-tab-text-hover) !important;
+}
+
+body.is-focused .workspace-tab-header.color-tab-colored.color-tab-wcag:not(.is-active):hover .workspace-tab-header-inner-title {
+  color: var(--color-tab-text-focused-hover) !important;
+}
+
+.workspace-tab-header.color-tab-colored.color-tab-wcag.is-active .workspace-tab-header-inner-title {
+  color: var(--color-tab-text-active) !important;
+}
+
+body.is-focused .workspace-tab-header.color-tab-colored.color-tab-wcag.is-active .workspace-tab-header-inner-title {
+  color: var(--color-tab-text-focused-active) !important;
+}
+
+body.is-focused .mod-active .workspace-tab-header.color-tab-colored.color-tab-wcag.is-active .workspace-tab-header-inner-title,
+body.is-focused .workspace-tab-header.color-tab-colored.color-tab-wcag.is-active.mod-active .workspace-tab-header-inner-title {
+  color: var(--color-tab-text-focused-active-current) !important;
+}
+
 /* ── Context-menu color swatch ────────────────────────────────────────────── */
 
 .menu-item .color-tab-swatch {
