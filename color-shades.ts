@@ -1,0 +1,77 @@
+export interface ColorShade {
+	name: string;
+	color: string;
+	isCurrent: boolean;
+}
+
+interface RgbColor {
+	r: number;
+	g: number;
+	b: number;
+}
+
+const SHADE_AMOUNTS = [0.45, 0.3, 0.15];
+
+function parseHexColor(color: string): RgbColor | null {
+	const match = /^#([0-9a-f]{6})$/i.exec(color);
+	if (!match) return null;
+
+	return {
+		r: parseInt(match[1].slice(0, 2), 16),
+		g: parseInt(match[1].slice(2, 4), 16),
+		b: parseInt(match[1].slice(4, 6), 16),
+	};
+}
+
+function mixChannel(channel: number, target: number, amount: number): number {
+	return Math.round(channel + (target - channel) * amount);
+}
+
+function mixColor(color: RgbColor, target: number, amount: number): string {
+	return `#${[color.r, color.g, color.b]
+		.map((channel) => mixChannel(channel, target, amount))
+		.map((channel) => channel.toString(16).padStart(2, "0"))
+		.join("")}`.toUpperCase();
+}
+
+function createShade(
+	name: string,
+	color: string,
+	currentColor: string
+): ColorShade {
+	return { name, color, isCurrent: color === currentColor };
+}
+
+export function createColorShades(
+	baseColor: string,
+	currentColor = baseColor
+): ColorShade[] {
+	const rgb = parseHexColor(baseColor);
+	if (!rgb) return [];
+
+	const normalizedBaseColor = baseColor.toUpperCase();
+	const normalizedCurrentColor = currentColor.toUpperCase();
+	return [
+		...SHADE_AMOUNTS.map((amount, index) => {
+			const color = mixColor(rgb, 0, amount);
+			return createShade(
+				`Darker ${SHADE_AMOUNTS.length - index}`,
+				color,
+				normalizedCurrentColor
+			);
+		}),
+		createShade(
+			normalizedBaseColor === normalizedCurrentColor ? "Current" : "Base",
+			normalizedBaseColor,
+			normalizedCurrentColor
+		),
+		...SHADE_AMOUNTS.slice().reverse().map((amount, index) => {
+			const color = mixColor(rgb, 255, amount);
+			return createShade(
+				`Lighter ${index + 1}`,
+				color,
+				normalizedCurrentColor
+			);
+		}),
+	];
+}
