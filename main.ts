@@ -72,7 +72,7 @@ export default class ColorTabPlugin extends Plugin {
 			})
 		);
 
-		// Clear/apply color when a new file is loaded into any leaf
+		// Clear/apply color when the active leaf changes.
 		this.registerEvent(
 			this.app.workspace.on("active-leaf-change", () => {
 				this.applyAllColors();
@@ -269,6 +269,14 @@ export default class ColorTabPlugin extends Plugin {
 		// For each file with duplicates, keep the first and close the rest
 		filePathMap.forEach((leaves) => {
 			if (leaves.length > 1) {
+				// Back/Forward modifier-clicks briefly clone the source leaf before
+				// opening the history target. Detaching that in-progress clone aborts
+				// navigation. A follow-up workspace event will retry once it settles.
+				const hasWorkingLeaf = leaves.some((leaf) =>
+					(leaf as unknown as { working?: boolean }).working === true
+				);
+				if (hasWorkingLeaf) return;
+
 				// Keep the first leaf and focus on it
 				const firstLeaf = leaves[0];
 				this.app.workspace.setActiveLeaf(firstLeaf);
